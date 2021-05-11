@@ -12,6 +12,7 @@ cognito_app_secret = "<secret>"
 cognito_domain_prefix = "sunnyoauth"
 api_gateway_url = "https://f4y2bwysuc.execute-api.us-east-1.amazonaws.com/dev"
 sessionInfo = {"id": "123", "sub": "sunny", "expirationTime": datetime.now(timezone.utc) + timedelta(minutes=15)}
+login_redirect_url = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/"
 
 
 @app.route('/apis/authentication/login')
@@ -40,7 +41,7 @@ def exchange_code():
     user_info["id"] = str(uuid.uuid4())
     global sessionInfo
     sessionInfo = user_info
-    return user_info
+    return redirect(login_redirect_url + "?session=" + sessionInfo["id"])
 
 
 @app.route('/apis/authentication/logout')
