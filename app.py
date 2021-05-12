@@ -1,18 +1,18 @@
 from flask import Flask, request, redirect
+import os
 import uuid
 import urllib.parse
 from urllib.parse import urlencode
-from datetime import datetime, timezone, timedelta
 import base64
 import requests
 
 app = Flask(__name__)
-cognito_app_id = "1vvp0tt53g1uhntoa5bmvnvk2a"
-cognito_app_secret = "<secret>"
-cognito_domain_prefix = "sunnyoauth"
-api_gateway_url = "https://f4y2bwysuc.execute-api.us-east-1.amazonaws.com/dev"
-sessionInfo = {"id": "123", "sub": "sunny", "expirationTime": datetime.now(timezone.utc) + timedelta(minutes=15)}
-login_redirect_url = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/"
+cognito_app_id = "1vvp0tt53g1uhntoa5bmvnvk2a" if os.environ.get("COGNITO_APP_ID") is None else os.environ.get("COGNITO_APP_ID")
+cognito_app_secret = "<secret>" if os.environ.get("COGNITO_APP_SECRET") is None else os.environ.get("COGNITO_APP_SECRET")
+cognito_domain_prefix = "sunnyoauth" if os.environ.get("COGNITO_DOMAIN_PREFIX") is None else os.environ.get("COGNITO_DOMAIN_PREFIX")
+api_gateway_url = "https://f4y2bwysuc.execute-api.us-east-1.amazonaws.com/dev" if os.environ.get("API_GATEWAY_URL") is None else os.environ.get("API_GATEWAY_URL")
+login_redirect_url = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/" if os.environ.get("LOGIN_REDIRECT_URL") is None else os.environ.get("LOGIN_REDIRECT_URL")
+sessionInfo = None
 
 
 @app.route('/apis/authentication/login')
@@ -24,6 +24,7 @@ def login_url():
 
 @app.route('/apis/authentication/status')
 def login_status():
+    global sessionInfo
     if sessionInfo is None:
         return ""
     return sessionInfo
