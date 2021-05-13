@@ -6,12 +6,14 @@
         "project_name": "flask",
         "runtime": "python3.7",
         "s3_bucket": "zappa-2qp1hfg5n",
+        "cors": true,
         "aws_environment_variables": {
             "COGNITO_APP_ID": "1vvp0tt53g1uhntoa5bmvnvk2a",
             "COGNITO_APP_SECRET": "<secret>",
             "COGNITO_DOMAIN_PREFIX": "sunnyoauth",
             "API_GATEWAY_URL": "https://f4y2bwysuc.execute-api.us-east-1.amazonaws.com/dev",
-            "LOGIN_REDIRECT_URL": "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/"
+            "CORS_ALLOW_ORIGIN": "http://localhost:4200",
+            "LOGIN_REDIRECT_URL": "http://localhost:4200"
         }
     }
 }

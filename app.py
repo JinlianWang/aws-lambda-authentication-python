@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, Response
 import os
 import uuid
 import urllib.parse
@@ -12,14 +12,15 @@ cognito_app_secret = "<secret>" if os.environ.get("COGNITO_APP_SECRET") is None 
 cognito_domain_prefix = "sunnyoauth" if os.environ.get("COGNITO_DOMAIN_PREFIX") is None else os.environ.get("COGNITO_DOMAIN_PREFIX")
 api_gateway_url = "https://f4y2bwysuc.execute-api.us-east-1.amazonaws.com/dev" if os.environ.get("API_GATEWAY_URL") is None else os.environ.get("API_GATEWAY_URL")
 login_redirect_url = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/" if os.environ.get("LOGIN_REDIRECT_URL") is None else os.environ.get("LOGIN_REDIRECT_URL")
+cors_allow_origin = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/" if os.environ.get("CORS_ALLOW_ORIGIN") is None else os.environ.get("CORS_ALLOW_ORIGIN")
 sessionInfo = None
 
 
 @app.route('/apis/authentication/login')
 def login_url():
-    return redirect(getCognitoHost() + "/oauth2/authorize?client_id=" \
-                    + cognito_app_id + "&redirect_uri=" + urllib.parse.quote_plus(getRedirectURI()) \
-                    + "&scope=openid&response_type=code")
+    return createResponse(getCognitoHost() + "/oauth2/authorize?client_id=" \
+                          + cognito_app_id + "&redirect_uri=" + urllib.parse.quote_plus(getRedirectURI()) \
+                          + "&scope=openid&response_type=code")
 
 
 @app.route('/apis/authentication/status')
@@ -27,7 +28,7 @@ def login_status():
     global sessionInfo
     if sessionInfo is None:
         return ""
-    return sessionInfo
+    return createResponse(sessionInfo)
 
 
 @app.route('/apis/authentication/exchange')
@@ -49,7 +50,7 @@ def exchange_code():
 def logout():
     global sessionInfo
     sessionInfo = None
-    return ""
+    return createResponse("")
 
 
 def getUserInfo(access_token: str):
@@ -68,6 +69,15 @@ def getRedirectURI():
 
 def getBase64EncodedCredential():
     return "Basic " + base64.b64encode((cognito_app_id + ":" + cognito_app_secret).encode("ascii")).decode("ascii")
+
+
+def createResponse(body: str):
+    global cors_allow_origin
+    response = Response(body)
+    response.headers['Access-Control-Allow-Origin'] = cors_allow_origin
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'OPTIONS,POST,GET'
+    return response
 
 
 if __name__ == '__main__':
