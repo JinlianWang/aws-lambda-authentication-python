@@ -1,3 +1,4 @@
+import json
 from flask import Flask, request, redirect, Response
 import os
 import uuid
@@ -28,7 +29,7 @@ def login_status():
     global sessionInfo
     if sessionInfo is None:
         return ""
-    return createResponse(sessionInfo)
+    return createResponse(json.dumps(sessionInfo))
 
 
 @app.route('/apis/authentication/exchange')
@@ -38,12 +39,23 @@ def exchange_code():
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Authorization": getBase64EncodedCredential()}
     data = urlencode(params)
     response = requests.post(getCognitoHost() + "/oauth2/token", data=data, headers=headers)
+    print("response: " + response.text)
     access_token = response.json()["access_token"]
+    print("token: " + access_token)
     user_info = getUserInfo(access_token)
     user_info["id"] = str(uuid.uuid4())
     global sessionInfo
     sessionInfo = user_info
+    print("user info: " + json.dumps(user_info))
     return redirect(login_redirect_url + "?session=" + sessionInfo["id"])
+
+
+@app.route('/apis/authentication/resource')
+def protected_resource():
+    global sessionInfo
+    if sessionInfo is None:
+        return "" #Not authorized, need to return http status code
+    return createResponse("Protected Resource Retrieved from DB.")
 
 
 @app.route('/apis/authentication/logout')
