@@ -14,7 +14,7 @@ cognito_domain_prefix = "sunnyoauth" if os.environ.get("COGNITO_DOMAIN_PREFIX") 
 api_gateway_url = "https://f4y2bwysuc.execute-api.us-east-1.amazonaws.com/dev" if os.environ.get("API_GATEWAY_URL") is None else os.environ.get("API_GATEWAY_URL")
 login_redirect_url = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/" if os.environ.get("LOGIN_REDIRECT_URL") is None else os.environ.get("LOGIN_REDIRECT_URL")
 cors_allow_origin = "http://athenatestsunny2020.s3-website-us-east-1.amazonaws.com/" if os.environ.get("CORS_ALLOW_ORIGIN") is None else os.environ.get("CORS_ALLOW_ORIGIN")
-sessionInfo = None
+session_info = None
 
 
 @app.route('/apis/authentication/login')
@@ -26,10 +26,12 @@ def login_url():
 
 @app.route('/apis/authentication/status')
 def login_status():
-    global sessionInfo
-    if sessionInfo is None:
-        return ""
-    return createResponse(json.dumps(sessionInfo))
+    global session_info
+    if (session_info is not None) and (getSessionToken() == session_info["id"]):
+        return createResponse(json.dumps(session_info))
+    print("Server: " + session_info["id"] if (session_info is not None) else "")
+    print("Session: " + getSessionToken())
+    return ""
 
 
 @app.route('/apis/authentication/exchange')
@@ -44,24 +46,24 @@ def exchange_code():
     print("token: " + access_token)
     user_info = getUserInfo(access_token)
     user_info["id"] = str(uuid.uuid4())
-    global sessionInfo
-    sessionInfo = user_info
+    global session_info
+    session_info = user_info
     print("user info: " + json.dumps(user_info))
-    return redirect(login_redirect_url + "?session=" + sessionInfo["id"])
+    return redirect(login_redirect_url + "?session=" + session_info["id"])
 
 
 @app.route('/apis/authentication/resource')
 def protected_resource():
-    global sessionInfo
-    if sessionInfo is None:
-        return "" #Not authorized, need to return http status code
-    return createResponse("Protected Resource Retrieved from DB.")
+    global session_info
+    if (session_info is not None) and (getSessionToken() == session_info["id"]):
+        return createResponse("Protected Resource Retrieved from DB.")
+    return createResponse("", 401)
 
 
 @app.route('/apis/authentication/logout')
 def logout():
-    global sessionInfo
-    sessionInfo = None
+    global session_info
+    session_info = None
     return createResponse("")
 
 
@@ -83,13 +85,24 @@ def getBase64EncodedCredential():
     return "Basic " + base64.b64encode((cognito_app_id + ":" + cognito_app_secret).encode("ascii")).decode("ascii")
 
 
-def createResponse(body: str):
+def createResponse(body: str, status_code: int = 200):
     global cors_allow_origin
     response = Response(body)
     response.headers['Access-Control-Allow-Origin'] = cors_allow_origin
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     response.headers['Access-Control-Allow-Methods'] = 'OPTIONS,POST,GET'
+    response.status_code = status_code
     return response
+
+
+def getSessionToken():
+    auth_header = request.headers.get("Authorization")
+    if auth_header is not None:
+        print("Header: " + auth_header)
+        auth_parts = auth_header.split(" ")
+        if (len(auth_parts) == 2) and (auth_parts[0] == "Bearer"):
+            return auth_parts[1]
+    return ""
 
 
 if __name__ == '__main__':
