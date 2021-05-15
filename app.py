@@ -6,6 +6,7 @@ import urllib.parse
 from urllib.parse import urlencode
 import base64
 import requests
+from datetime import datetime
 
 app = Flask(__name__)
 cognito_app_id = "1vvp0tt53g1uhntoa5bmvnvk2a" if os.environ.get("COGNITO_APP_ID") is None else os.environ.get("COGNITO_APP_ID")
@@ -27,10 +28,10 @@ def login_url():
 @app.route('/apis/authentication/status')
 def login_status():
     global session_info
-    if (session_info is not None) and (getSessionToken() == session_info["id"]):
+    if (session_info is not None) and (getSessionToken() == session_info["id"]) and (
+            session_info["expirationTime"] > int(datetime.now().timestamp() * 1000)):
         return createResponse(json.dumps(session_info))
-    print("Server: " + session_info["id"] if (session_info is not None) else "")
-    print("Session: " + getSessionToken())
+    print("Session ID: " + getSessionToken())
     return ""
 
 
@@ -41,21 +42,21 @@ def exchange_code():
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Authorization": getBase64EncodedCredential()}
     data = urlencode(params)
     response = requests.post(getCognitoHost() + "/oauth2/token", data=data, headers=headers)
-    print("response: " + response.text)
     access_token = response.json()["access_token"]
-    print("token: " + access_token)
     user_info = getUserInfo(access_token)
     user_info["id"] = str(uuid.uuid4())
+    user_info["expirationTime"] = int(datetime.now().timestamp() * 1000 + 15 * 60 * 1000)  # Valid for 15 minutes
     global session_info
     session_info = user_info
-    print("user info: " + json.dumps(user_info))
     return redirect(login_redirect_url + "?session=" + session_info["id"])
 
 
 @app.route('/apis/authentication/resource')
 def protected_resource():
+    print("Session ID: " + getSessionToken())
     global session_info
-    if (session_info is not None) and (getSessionToken() == session_info["id"]):
+    if (session_info is not None) and (getSessionToken() == session_info["id"]) and (
+            session_info["expirationTime"] > int(datetime.now().timestamp() * 1000)):
         return createResponse("Protected Resource Retrieved from DB.")
     return createResponse("", 401)
 
@@ -98,7 +99,6 @@ def createResponse(body: str, status_code: int = 200):
 def getSessionToken():
     auth_header = request.headers.get("Authorization")
     if auth_header is not None:
-        print("Header: " + auth_header)
         auth_parts = auth_header.split(" ")
         if (len(auth_parts) == 2) and (auth_parts[0] == "Bearer"):
             return auth_parts[1]
