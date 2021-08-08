@@ -10,6 +10,7 @@ The project can be developed locally and deployed to production in AWS. See "Dev
 Use the following command to hot load any change in Python code. 
 
 ```
+source .env/bin/activate
 export FLASK_APP=app.py
 export FLASK_ENV=development
 flask run
